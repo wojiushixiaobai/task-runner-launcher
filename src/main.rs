@@ -1,7 +1,10 @@
-use std::{ffi::CString, ptr::null};
+use std::{
+    ffi::CString,
+    ptr::{null, null_mut},
+};
 
 use clap::{Parser, Subcommand};
-use libc::{c_char, chdir, setgid, setuid};
+use libc::{c_char, chdir, getgroups, setgid, setgroups, setuid};
 #[cfg(feature = "secure-mode")]
 use libc::{getegid, geteuid};
 use log::debug;
@@ -34,20 +37,28 @@ fn set_uid_and_gid(uid: u32, gid: u32) {
         // otherwise the setgid call fails
         if geteuid() == 0 {
             setgid(gid);
+            setgroups(0, null());
             setuid(uid);
         } else {
             setuid(uid);
             setgid(gid);
+            setgroups(0, null());
         }
 
         #[cfg(feature = "secure-mode")]
         {
             let effective_uid = geteuid();
             let effective_gid = getegid();
+            let sup_groups = getgroups(0, null_mut());
             if effective_uid != uid {
                 panic!("Expected user ID {}, instead got {}", uid, effective_uid);
             } else if effective_gid != gid {
                 panic!("Expected group ID {}, instead got {}", gid, effective_gid);
+            } else if sup_groups != 0 {
+                panic!(
+                    "Expected 0 supplementary groups, instead got {}",
+                    sup_groups
+                );
             }
         }
     }
@@ -75,10 +86,15 @@ enum Commands {
 }
 
 unsafe fn get_errno_str() -> String {
-    let reason = CString::from_raw(libc::strerror(
+    let reason_orig = CString::from_raw(libc::strerror(
         std::io::Error::last_os_error().raw_os_error().unwrap(),
     ));
-    reason.to_str().unwrap().to_string()
+    let reason = reason_orig.clone();
+    // We need to forget this, otherwise Rust will try to free it which
+    // result in a segfault
+    std::mem::forget(reason_orig);
+    let reason_str = reason.to_str().unwrap();
+    reason_str.to_string()
 }
 
 fn launch_runner(config: TaskRunnerConfig) {
@@ -125,7 +141,16 @@ fn launch_runner(config: TaskRunnerConfig) {
         debug!("args built: {:?}", args);
 
         debug!("Executing runner (execve)");
-        libc::execve(command.as_ptr(), c_args.as_ptr(), c_envs.as_ptr());
+
+        // In theory, this should never happen, but just in case something goes wrong,
+        // we should give a decent error
+        if libc::execve(command.as_ptr(), c_args.as_ptr(), c_envs.as_ptr()) == -1 {
+            let err_str = get_errno_str();
+            panic!(
+                "Failed to execute task runner with error \"{}\". Exiting.",
+                err_str
+            );
+        }
     }
 }
 

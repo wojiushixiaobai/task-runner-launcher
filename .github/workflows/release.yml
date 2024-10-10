@@ -17,5 +17,6 @@ jobs:
           bin: task-runner-launcher
           target: ${{ matrix.target }}
           zip: all
+          tar: none
           token: ${{ secrets.GITHUB_TOKEN }}
           checksum: sha256

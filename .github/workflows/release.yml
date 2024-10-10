@@ -18,3 +18,4 @@ jobs:
           target: ${{ matrix.target }}
           zip: all
           token: ${{ secrets.GITHUB_TOKEN }}
+          checksum: sha256

@@ -1,12 +1,12 @@
 package auth
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"n8n-launcher/internal/logs"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -25,9 +25,9 @@ type message struct {
 	Types    []string `json:"types,omitempty"`    // for runner:info
 	Name     string   `json:"name,omitempty"`     // for runner:info
 	TaskType string   `json:"taskType,omitempty"` // for runner:taskoffer
-	OfferId  string   `json:"offerId,omitempty"`  // for runner:taskoffer
+	OfferID  string   `json:"offerId,omitempty"`  // for runner:taskoffer
 	ValidFor int      `json:"validFor,omitempty"` // for runner:taskoffer
-	TaskId   string   `json:"taskId,omitempty"`   // for broker:taskofferaccept
+	TaskID   string   `json:"taskId,omitempty"`   // for broker:taskofferaccept
 }
 
 type HandshakeConfig struct {
@@ -96,12 +96,10 @@ func connectToWebsocket(wsURL *url.URL, grantToken string) (*websocket.Conn, err
 	return wsConn, nil
 }
 
-// @TODO: Improve
-func RandomId() string {
-	timestamp := time.Now().UTC().String()
-	hexEncoded := hex.EncodeToString([]byte(timestamp))
-
-	return hexEncoded[:8]
+func randomID() string {
+	b := make([]byte, 8)
+	rand.Read(b)
+	return hex.EncodeToString(b)
 }
 
 // Handshake is the flow where the launcher connects via websocket with main,
@@ -113,8 +111,8 @@ func Handshake(cfg HandshakeConfig) error {
 		return fmt.Errorf("received invalid handshake config: %w", err)
 	}
 
-	runnerID := "launcher-" + RandomId()
-	wsURL, err := buildWebsocketURL(cfg.N8nUri, "launcher-"+RandomId())
+	runnerID := "launcher-" + randomID()
+	wsURL, err := buildWebsocketURL(cfg.N8nUri, "launcher-"+randomID())
 	if err != nil {
 		return fmt.Errorf("failed to build websocket URL: %w", err)
 	}
@@ -156,13 +154,13 @@ func Handshake(cfg HandshakeConfig) error {
 					return
 				}
 
-				logs.Logger.Printf("-> Sent message `%s` for runner ID %s", msg.Type, runnerID)
+				logs.Logger.Printf("-> Sent message `%s` for runner ID `%s`", msg.Type, runnerID)
 
 			case msgBrokerRunnerRegistered:
 				msg := message{
 					Type:     msgRunnerTaskOffer,
 					TaskType: cfg.TaskType,
-					OfferId:  "launcher-" + RandomId(),
+					OfferID:  "launcher-" + randomID(),
 					ValidFor: -1, // non-expiring offer
 				}
 
@@ -171,13 +169,13 @@ func Handshake(cfg HandshakeConfig) error {
 					return
 				}
 
-				logs.Logger.Printf("-> Sent message `%s` for offer ID %s", msg.Type, msg.OfferId)
+				logs.Logger.Printf("-> Sent message `%s` for offer ID `%s`", msg.Type, msg.OfferID)
 				logs.Logger.Println("Waiting for task offer to be accepted...")
 
 			case msgBrokerTaskOfferAccept:
 				msg := message{
 					Type:   msgRunnerTaskDeferred,
-					TaskId: msg.TaskId,
+					TaskID: msg.TaskID,
 				}
 
 				if err := wsConn.WriteJSON(msg); err != nil {
@@ -185,7 +183,7 @@ func Handshake(cfg HandshakeConfig) error {
 					return
 				}
 
-				logs.Logger.Printf("-> Sent message `%s` for task ID %s", msg.Type, msg.TaskId)
+				logs.Logger.Printf("-> Sent message `%s` for task ID %s", msg.Type, msg.TaskID)
 
 				logs.Logger.Printf("Completed handshake")
 

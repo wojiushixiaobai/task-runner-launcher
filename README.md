@@ -1,9 +1,9 @@
-# n8n-launcher
+# task-runner-launcher
 
 CLI utility to launch [n8n task runners](https://docs.n8n.io/PENDING).
 
 ```sh
-./n8n-launcher javascript
+./task-runner-launcher launch -type javascript
 2024/11/15 13:53:33 Starting to execute `launch` command...
 2024/11/15 13:53:33 Loaded config file loaded with a single runner config
 2024/11/15 13:53:33 Changed into working directory: /Users/ivov/Development/n8n-launcher/bin
@@ -73,7 +73,7 @@ Once setup is complete, start the launcher:
 ```sh
 export N8N_RUNNERS_AUTH_TOKEN=...
 export N8N_RUNNERS_N8N_URI=... 
-./n8n-launcher javascript
+./task-runner-launcher javascript
 ```
 
 ## Development

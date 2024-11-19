@@ -171,7 +171,7 @@ func Handshake(cfg HandshakeConfig) error {
 				}
 
 				logs.Logger.Printf("-> Sent message `%s` for offer ID `%s`", msg.Type, msg.OfferID)
-				logs.Logger.Println("Waiting for task offer to be accepted...")
+				logs.Logger.Println("Waiting for launcher's task offer to be accepted...")
 
 			case msgBrokerTaskOfferAccept:
 				msg := message{
@@ -188,8 +188,7 @@ func Handshake(cfg HandshakeConfig) error {
 
 				wsConn.Close() // disregard close error, handshake already completed
 
-				logs.Logger.Printf("Disconnected websocket")
-				logs.Logger.Printf("Completed handshake")
+				logs.Logger.Printf("Disconnected: %s", wsURL.String())
 
 				close(handshakeComplete)
 

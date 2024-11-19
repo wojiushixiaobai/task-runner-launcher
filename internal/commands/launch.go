@@ -104,7 +104,7 @@ func (l *LaunchCommand) Execute() error {
 
 	// 7. launch runner
 
-	logs.Logger.Println("Launching task runner...")
+	logs.Logger.Println("Task ready for pickup, launching runner...")
 	logs.Logger.Printf("Command: %s", runnerConfig.Command)
 	logs.Logger.Printf("Args: %v", runnerConfig.Args)
 	logs.Logger.Printf("Env vars: %v", env.Keys(runnerEnv))

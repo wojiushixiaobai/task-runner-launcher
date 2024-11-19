@@ -184,7 +184,7 @@ func Handshake(cfg HandshakeConfig) error {
 					return
 				}
 
-				logs.Logger.Printf("-> Sent message `%s` for task ID %s", msg.Type, msg.TaskID)
+				logs.Logger.Printf("-> Sent message `%s` for task ID `%s`", msg.Type, msg.TaskID)
 
 				wsConn.Close() // disregard close error, handshake already completed
 

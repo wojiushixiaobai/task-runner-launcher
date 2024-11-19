@@ -2,7 +2,7 @@
 
 Portions of this software are licensed as follows:
 
-- Content of branches other than the main branch (i.e. "master") are not licensed.
+- Content of branches other than the main branch (i.e. "main") are not licensed.
 - Source code files that contain ".ee." in their filename are NOT licensed under the Sustainable Use License.
   To use source code files that contain ".ee." in their filename you must hold a valid n8n Enterprise License
   specifically allowing you access to such source code files and as defined in "LICENSE_EE.md".

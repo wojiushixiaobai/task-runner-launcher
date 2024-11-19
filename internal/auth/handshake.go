@@ -91,7 +91,7 @@ func connectToWebsocket(wsURL *url.URL, grantToken string) (*websocket.Conn, err
 		return nil, fmt.Errorf("websocket connection failed: %w", err)
 	}
 
-	logs.Logger.Printf("Connected to websocket: %s", wsURL.String())
+	logs.Logger.Printf("Connected: %s", wsURL.String())
 
 	return wsConn, nil
 }
@@ -111,8 +111,10 @@ func Handshake(cfg HandshakeConfig) error {
 		return fmt.Errorf("received invalid handshake config: %w", err)
 	}
 
-	runnerID := "launcher-" + randomID()
-	wsURL, err := buildWebsocketURL(cfg.N8nUri, "launcher-"+randomID())
+	runnerID := randomID()
+	logs.Logger.Printf("Launcher's runner ID: %s", runnerID)
+
+	wsURL, err := buildWebsocketURL(cfg.N8nUri, runnerID)
 	if err != nil {
 		return fmt.Errorf("failed to build websocket URL: %w", err)
 	}
@@ -154,13 +156,13 @@ func Handshake(cfg HandshakeConfig) error {
 					return
 				}
 
-				logs.Logger.Printf("-> Sent message `%s` for runner ID `%s`", msg.Type, runnerID)
+				logs.Logger.Printf("-> Sent message `%s`", msg.Type)
 
 			case msgBrokerRunnerRegistered:
 				msg := message{
 					Type:     msgRunnerTaskOffer,
 					TaskType: cfg.TaskType,
-					OfferID:  "launcher-" + randomID(),
+					OfferID:  randomID(),
 					ValidFor: -1, // non-expiring offer
 				}
 

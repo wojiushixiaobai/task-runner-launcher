@@ -70,20 +70,41 @@ func (l *LaunchCommand) Execute() error {
 
 	logs.Logger.Printf("Filtered environment variables")
 
-	// 4. authenticate with n8n main instance
+	// 4. fetch grant token for launcher
 
-	grantToken, err := auth.FetchGrantToken(n8nUri, token)
+	launcherGrantToken, err := auth.FetchGrantToken(n8nUri, token)
 	if err != nil {
-		return fmt.Errorf("failed to fetch grant token from n8n main instance: %w", err)
+		return fmt.Errorf("failed to fetch grant token for launcher: %w", err)
 	}
 
-	runnerEnv = append(runnerEnv, fmt.Sprintf("N8N_RUNNERS_GRANT_TOKEN=%s", grantToken))
+	runnerEnv = append(runnerEnv, fmt.Sprintf("N8N_RUNNERS_GRANT_TOKEN=%s", launcherGrantToken))
 
-	logs.Logger.Println("Authenticated with n8n main instance")
+	logs.Logger.Println("Fetched grant token for launcher")
 
-	// 5. launch runner
+	// 5. connect to main and wait for task offer to be accepted
 
-	logs.Logger.Println("Launching runner...")
+	handshakeCfg := auth.HandshakeConfig{
+		TaskType:   l.RunnerType,
+		N8nUri:     n8nUri,
+		GrantToken: launcherGrantToken,
+	}
+
+	if err := auth.Handshake(handshakeCfg); err != nil {
+		return fmt.Errorf("handshake failed: %w", err)
+	}
+
+	// 6. fetch grant token for runner
+
+	runnerGrantToken, err := auth.FetchGrantToken(n8nUri, token)
+	if err != nil {
+		return fmt.Errorf("failed to fetch grant token for runner: %w", err)
+	}
+
+	runnerEnv = append(runnerEnv, fmt.Sprintf("N8N_RUNNERS_GRANT_TOKEN=%s", runnerGrantToken))
+
+	// 7. launch runner
+
+	logs.Logger.Println("Launching task runner...")
 	logs.Logger.Printf("Command: %s", runnerConfig.Command)
 	logs.Logger.Printf("Args: %v", runnerConfig.Args)
 	logs.Logger.Printf("Env vars: %v", env.Keys(runnerEnv))

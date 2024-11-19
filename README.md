@@ -3,7 +3,7 @@
 CLI utility to launch [n8n task runners](https://docs.n8n.io/PENDING).
 
 ```sh
-./n8n-launcher launch -type javascript
+./n8n-launcher javascript
 2024/11/15 13:53:33 Starting to execute `launch` command...
 2024/11/15 13:53:33 Loaded config file loaded with a single runner config
 2024/11/15 13:53:33 Changed into working directory: /Users/ivov/Development/n8n-launcher/bin

@@ -123,7 +123,6 @@ func Handshake(cfg HandshakeConfig) error {
 	if err != nil {
 		return err
 	}
-	defer wsConn.Close()
 
 	errReceived := make(chan error)
 	handshakeComplete := make(chan struct{})
@@ -187,6 +186,9 @@ func Handshake(cfg HandshakeConfig) error {
 
 				logs.Logger.Printf("-> Sent message `%s` for task ID %s", msg.Type, msg.TaskID)
 
+				wsConn.Close() // disregard close error, handshake already completed
+
+				logs.Logger.Printf("Disconnected websocket")
 				logs.Logger.Printf("Completed handshake")
 
 				close(handshakeComplete)

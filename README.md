@@ -78,7 +78,7 @@ export N8N_RUNNERS_N8N_URI=...
 
 ## Development
 
-1. Install Go >=1.23
+1. Install Go >=1.23, `golangci-lint` and `make`
 
 2. Clone repo and create a [config file](#config)
 
@@ -104,11 +104,10 @@ pnpm start
 5. Build and run launcher:
 
 ```sh
-go build -o bin cmd/launcher/main.go
-
 export N8N_RUNNERS_N8N_URI=...
 export N8N_RUNNERS_AUTH_TOKEN=...
-./bin/main javascript
+
+make run
 ```
 
 ## Release

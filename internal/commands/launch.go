@@ -85,7 +85,7 @@ func (l *LaunchCommand) Execute() error {
 
 	handshakeCfg := auth.HandshakeConfig{
 		TaskType:   l.RunnerType,
-		N8nUri:     n8nURI,
+		N8nURI:     n8nURI,
 		GrantToken: launcherGrantToken,
 	}
 

@@ -32,7 +32,7 @@ type message struct {
 
 type HandshakeConfig struct {
 	TaskType   string
-	N8nUri     string
+	N8nURI     string
 	GrantToken string
 }
 
@@ -41,7 +41,7 @@ func validateConfig(cfg HandshakeConfig) error {
 		return fmt.Errorf("runner type is missing")
 	}
 
-	if cfg.N8nUri == "" {
+	if cfg.N8nURI == "" {
 		return fmt.Errorf("n8n URI is missing")
 	}
 
@@ -52,12 +52,12 @@ func validateConfig(cfg HandshakeConfig) error {
 	return nil
 }
 
-func buildWebsocketURL(n8nUri, runnerID string) (*url.URL, error) {
-	if !strings.HasPrefix(n8nUri, "http://") && !strings.HasPrefix(n8nUri, "https://") {
-		n8nUri = "http://" + n8nUri
+func buildWebsocketURL(n8nURI, runnerID string) (*url.URL, error) {
+	if !strings.HasPrefix(n8nURI, "http://") && !strings.HasPrefix(n8nURI, "https://") {
+		n8nURI = "http://" + n8nURI
 	}
 
-	u, err := url.Parse(n8nUri)
+	u, err := url.Parse(n8nURI)
 	if err != nil {
 		return nil, fmt.Errorf("invalid n8n URI: %w", err)
 	}
@@ -98,7 +98,7 @@ func connectToWebsocket(wsURL *url.URL, grantToken string) (*websocket.Conn, err
 
 func randomID() string {
 	b := make([]byte, 8)
-	rand.Read(b)
+	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
 }
 
@@ -114,7 +114,7 @@ func Handshake(cfg HandshakeConfig) error {
 	runnerID := randomID()
 	logs.Logger.Printf("Launcher's runner ID: %s", runnerID)
 
-	wsURL, err := buildWebsocketURL(cfg.N8nUri, runnerID)
+	wsURL, err := buildWebsocketURL(cfg.N8nURI, runnerID)
 	if err != nil {
 		return fmt.Errorf("failed to build websocket URL: %w", err)
 	}

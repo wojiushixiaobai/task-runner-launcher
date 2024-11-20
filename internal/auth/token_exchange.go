@@ -16,8 +16,8 @@ type grantTokenResponse struct {
 // FetchGrantToken exchanges the launcher's auth token for a less privileged
 // grant token returned by the n8n main instance. The launcher will later pass
 // this grant token to the task runner.
-func FetchGrantToken(n8nUri, authToken string) (string, error) {
-	url := fmt.Sprintf("http://%s/runners/auth", n8nUri)
+func FetchGrantToken(n8nURI, authToken string) (string, error) {
+	url := fmt.Sprintf("http://%s/runners/auth", n8nURI)
 
 	payload := map[string]string{"token": authToken}
 	payloadBytes, err := json.Marshal(payload)

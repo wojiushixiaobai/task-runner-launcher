@@ -18,9 +18,9 @@ func (l *LaunchCommand) Execute() error {
 	logs.Logger.Println("Started executing `launch` command")
 
 	token := os.Getenv("N8N_RUNNERS_AUTH_TOKEN")
-	n8nUri := os.Getenv("N8N_RUNNERS_N8N_URI")
+	n8nURI := os.Getenv("N8N_RUNNERS_N8N_URI")
 
-	if token == "" || n8nUri == "" {
+	if token == "" || n8nURI == "" {
 		return fmt.Errorf("both N8N_RUNNERS_AUTH_TOKEN and N8N_RUNNERS_N8N_URI are required")
 	}
 
@@ -72,7 +72,7 @@ func (l *LaunchCommand) Execute() error {
 
 	// 4. fetch grant token for launcher
 
-	launcherGrantToken, err := auth.FetchGrantToken(n8nUri, token)
+	launcherGrantToken, err := auth.FetchGrantToken(n8nURI, token)
 	if err != nil {
 		return fmt.Errorf("failed to fetch grant token for launcher: %w", err)
 	}
@@ -85,7 +85,7 @@ func (l *LaunchCommand) Execute() error {
 
 	handshakeCfg := auth.HandshakeConfig{
 		TaskType:   l.RunnerType,
-		N8nUri:     n8nUri,
+		N8nUri:     n8nURI,
 		GrantToken: launcherGrantToken,
 	}
 
@@ -95,7 +95,7 @@ func (l *LaunchCommand) Execute() error {
 
 	// 6. fetch grant token for runner
 
-	runnerGrantToken, err := auth.FetchGrantToken(n8nUri, token)
+	runnerGrantToken, err := auth.FetchGrantToken(n8nURI, token)
 	if err != nil {
 		return fmt.Errorf("failed to fetch grant token for runner: %w", err)
 	}

@@ -19,7 +19,7 @@ const idleTimeoutEnvVar = "N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT"
 const defaultIdleTimeoutValue = "15" // seconds
 
 func (l *LaunchCommand) Execute() error {
-	logs.Logger.Println("Started executing `launch` command")
+	logs.Info("Starting to execute `launch` command")
 
 	token := os.Getenv("N8N_RUNNERS_AUTH_TOKEN")
 	n8nURI := os.Getenv("N8N_RUNNERS_N8N_URI")
@@ -42,7 +42,7 @@ func (l *LaunchCommand) Execute() error {
 
 	cfg, err := config.ReadConfig()
 	if err != nil {
-		logs.Logger.Printf("Error reading config: %v", err)
+		logs.Errorf("Error reading config: %v", err)
 		return err
 	}
 
@@ -63,9 +63,9 @@ func (l *LaunchCommand) Execute() error {
 	cfgNum := len(cfg.TaskRunners)
 
 	if cfgNum == 1 {
-		logs.Logger.Println("Loaded config file with a single runner config")
+		logs.Debug("Loaded config file loaded with a single runner config")
 	} else {
-		logs.Logger.Printf("Loaded config file with %d runner configs", cfgNum)
+		logs.Debugf("Loaded config file with %d runner configs", cfgNum)
 	}
 
 	// 2. change into working directory
@@ -74,7 +74,7 @@ func (l *LaunchCommand) Execute() error {
 		return fmt.Errorf("failed to chdir into configured dir (%s): %w", runnerConfig.WorkDir, err)
 	}
 
-	logs.Logger.Printf("Changed into working directory: %s", runnerConfig.WorkDir)
+	logs.Debugf("Changed into working directory: %s", runnerConfig.WorkDir)
 
 	// 3. filter environment variables
 
@@ -82,7 +82,7 @@ func (l *LaunchCommand) Execute() error {
 	allowedEnvs := append(defaultEnvs, runnerConfig.AllowedEnv...)
 	runnerEnv := env.AllowedOnly(allowedEnvs)
 
-	logs.Logger.Printf("Filtered environment variables")
+	logs.Debugf("Filtered environment variables")
 
 	for {
 		// 4. fetch grant token for launcher
@@ -92,7 +92,7 @@ func (l *LaunchCommand) Execute() error {
 			return fmt.Errorf("failed to fetch grant token for launcher: %w", err)
 		}
 
-		logs.Logger.Println("Fetched grant token for launcher")
+		logs.Debug("Fetched grant token for launcher")
 
 		// 5. connect to main and wait for task offer to be accepted
 
@@ -113,16 +113,16 @@ func (l *LaunchCommand) Execute() error {
 			return fmt.Errorf("failed to fetch grant token for runner: %w", err)
 		}
 
-		logs.Logger.Println("Fetched grant token for runner")
+		logs.Debug("Fetched grant token for runner")
 
 		runnerEnv = append(runnerEnv, fmt.Sprintf("N8N_RUNNERS_GRANT_TOKEN=%s", runnerGrantToken))
 
 		// 7. launch runner
 
-		logs.Logger.Println("Task ready for pickup, launching runner...")
-		logs.Logger.Printf("Command: %s", runnerConfig.Command)
-		logs.Logger.Printf("Args: %v", runnerConfig.Args)
-		logs.Logger.Printf("Env vars: %v", env.Keys(runnerEnv))
+		logs.Debug("Task ready for pickup, launching runner...")
+		logs.Debugf("Command: %s", runnerConfig.Command)
+		logs.Debugf("Args: %v", runnerConfig.Args)
+		logs.Debugf("Env vars: %v", env.Keys(runnerEnv))
 
 		cmd := exec.Command(runnerConfig.Command, runnerConfig.Args...)
 		cmd.Env = runnerEnv
@@ -131,9 +131,9 @@ func (l *LaunchCommand) Execute() error {
 
 		err = cmd.Run()
 		if err != nil {
-			logs.Logger.Printf("Runner process failed: %v", err)
+			logs.Infof("Runner process failed: %v", err)
 		} else {
-			logs.Logger.Printf("Runner exited on idle timeout")
+			logs.Infof("Runner exited on idle timeout")
 		}
 
 		// next runner will need to fetch a new grant token

@@ -1,8 +1,60 @@
 package env
 
 import (
+	"errors"
+	"fmt"
+	"net/url"
 	"os"
+	"strconv"
 	"strings"
+)
+
+const (
+	// ------------------------
+	//          auth
+	// ------------------------
+
+	// EnvVarAuthToken is the env var for the auth token sent by the launcher to
+	// the main instance in exchange for a single-use grant token.
+	// nolint:gosec // G101: False positive
+	EnvVarAuthToken = "N8N_RUNNERS_AUTH_TOKEN"
+
+	// EnvVarGrantToken is the env var for the single-use grant token returned by
+	// the main instance to the launcher in exchange for the auth token.
+	// nolint:gosec // G101: False positive
+	EnvVarGrantToken = "N8N_RUNNERS_GRANT_TOKEN"
+
+	// ------------------------
+	//        n8n main
+	// ------------------------
+
+	// EnvVarMainServerURI is the env var for the URI of the n8n main instance's
+	// main server, typically at http://127.0.0.1:5678.
+	EnvVarMainServerURI = "N8N_MAIN_URI"
+
+	// EnVarTaskBrokerServerURI is the env var for the URI of the n8n main
+	// instance's task broker server, typically at http://127.0.0.1:5679.
+	EnVarTaskBrokerServerURI = "N8N_TASK_BROKER_URI"
+
+	// ------------------------
+	//         runner
+	// ------------------------
+
+	// EnvVarRunnerServerURI is the env var for the URI of the runner's server.
+	// Used for monitoring the runner's health, typically at http://127.0.0.1:5680.
+	EnvVarRunnerServerURI = "N8N_RUNNER_URI"
+
+	// EnvVarRunnerServerEnabled is the env var for whether the runner's health
+	// check server should be started.
+	EnvVarRunnerServerEnabled = "N8N_RUNNERS_SERVER_ENABLED"
+
+	// EnvVarIdleTimeout is the env var for how long (in seconds) a runner may be
+	// idle for before exit.
+	EnvVarIdleTimeout = "N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT"
+)
+
+const (
+	defaultIdleTimeoutValue = "15" // seconds
 )
 
 // AllowedOnly filters the current environment down to only those
@@ -49,4 +101,68 @@ func Clear(envVars []string, envVarName string) []string {
 	}
 
 	return result
+}
+
+// Config holds validated environment variable values.
+type Config struct {
+	AuthToken           string
+	MainServerURI       string
+	TaskBrokerServerURI string
+	RunnerServerURI     string
+}
+
+// FromEnv retrieves vars from the environment, validates their values, and
+// returns a Config holding the validated values, or a slice of errors.
+func FromEnv() (*Config, error) {
+	var errs []error
+
+	authToken := os.Getenv(EnvVarAuthToken)
+	mainServerURI := os.Getenv(EnvVarMainServerURI)
+	taskBrokerServerURI := os.Getenv(EnVarTaskBrokerServerURI)
+	runnerServerURI := os.Getenv(EnvVarRunnerServerURI)
+	idleTimeout := os.Getenv(EnvVarIdleTimeout)
+
+	if authToken == "" {
+		errs = append(errs, fmt.Errorf("%s is required", EnvVarAuthToken))
+	}
+
+	if mainServerURI == "" {
+		errs = append(errs, fmt.Errorf("%s is required", EnvVarMainServerURI))
+	} else if _, err := url.Parse(mainServerURI); err != nil {
+		errs = append(errs, fmt.Errorf("%s must be a valid URL: %w", EnvVarMainServerURI, err))
+	}
+
+	if runnerServerURI == "" {
+		errs = append(errs, fmt.Errorf("%s is required", EnvVarRunnerServerURI))
+	} else if _, err := url.Parse(runnerServerURI); err != nil {
+		errs = append(errs, fmt.Errorf("%s must be a valid URL: %w", EnvVarRunnerServerURI, err))
+	}
+
+	if taskBrokerServerURI == "" {
+		errs = append(errs, fmt.Errorf("%s is required", EnVarTaskBrokerServerURI))
+	} else if _, err := url.Parse(taskBrokerServerURI); err != nil {
+		errs = append(errs, fmt.Errorf("%s must be a valid URL: %w", EnVarTaskBrokerServerURI, err))
+	}
+
+	if idleTimeout == "" {
+		os.Setenv(EnvVarIdleTimeout, defaultIdleTimeoutValue)
+	} else {
+		idleTimeoutInt, err := strconv.Atoi(idleTimeout)
+		if err != nil || idleTimeoutInt < 0 {
+			errs = append(errs, fmt.Errorf("%s must be a non-negative integer", EnvVarIdleTimeout))
+		}
+	}
+
+	if len(errs) > 0 {
+		return nil, errors.Join(errs...)
+	}
+
+	os.Setenv(EnvVarRunnerServerEnabled, "true")
+
+	return &Config{
+		AuthToken:           authToken,
+		MainServerURI:       mainServerURI,
+		TaskBrokerServerURI: taskBrokerServerURI,
+		RunnerServerURI:     runnerServerURI,
+	}, nil
 }

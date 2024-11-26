@@ -1,9 +1,11 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
+	"sync"
 	"task-runner-launcher/internal/auth"
 	"task-runner-launcher/internal/config"
 	"task-runner-launcher/internal/env"
@@ -117,17 +119,32 @@ func (l *LaunchCommand) Execute() error {
 		logs.Debugf("Args: %v", runnerCfg.Args)
 		logs.Debugf("Env vars: %v", env.Keys(runnerEnv))
 
-		cmd := exec.Command(runnerCfg.Command, runnerCfg.Args...)
+		ctx, cancelHealthMonitor := context.WithCancel(context.Background())
+		var wg sync.WaitGroup
+
+		cmd := exec.CommandContext(ctx, runnerCfg.Command, runnerCfg.Args...)
 		cmd.Env = runnerEnv
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 
-		err = cmd.Run()
-		if err != nil {
-			logs.Infof("Runner process failed: %v", err)
-		} else {
-			logs.Infof("Runner exited on idle timeout")
+		if err := cmd.Start(); err != nil {
+			cancelHealthMonitor()
+			return fmt.Errorf("failed to start runner process: %w", err)
 		}
+
+		go http.MonitorRunnerHealth(ctx, cmd, envCfg.RunnerServerURI, &wg)
+
+		err = cmd.Wait()
+		if err != nil && err.Error() == "signal: killed" {
+			logs.Warn("Unhealthy runner process was terminated")
+		} else if err != nil {
+			logs.Errorf("Runner process exited with error: %v", err)
+		} else {
+			logs.Info("Runner exited on idle timeout")
+		}
+		cancelHealthMonitor()
+
+		wg.Wait()
 
 		// next runner will need to fetch a new grant token
 		runnerEnv = env.Clear(runnerEnv, env.EnvVarGrantToken)

@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"task-runner-launcher/internal/commands"
+	"task-runner-launcher/internal/errorreporting"
 	"task-runner-launcher/internal/http"
 	"task-runner-launcher/internal/logs"
 )
@@ -26,6 +27,9 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
+
+	errorreporting.Init()
+	defer errorreporting.Close()
 
 	srv := http.NewHealthCheckServer()
 	go func() {

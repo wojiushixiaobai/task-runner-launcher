@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/url"
+	"task-runner-launcher/internal/errs"
 	"task-runner-launcher/internal/logs"
 
 	"github.com/gorilla/websocket"
@@ -97,6 +98,11 @@ func randomID() string {
 	return hex.EncodeToString(b)
 }
 
+func isWsCloseError(err error) bool {
+	_, ok := err.(*websocket.CloseError)
+	return ok
+}
+
 // Handshake is the flow where the launcher connects via websocket with main,
 // registers with main's task broker, sends a non-expiring task offer to main, and
 // receives the accept for that offer from main. Note that the handshake completes
@@ -129,10 +135,14 @@ func Handshake(cfg HandshakeConfig) error {
 			var msg message
 			err := wsConn.ReadJSON(&msg)
 			if err != nil {
-				if err == websocket.ErrReadLimit {
-					logs.Errorf("Websocket message too large for buffer - please increase buffer size")
+				switch {
+				case isWsCloseError(err):
+					errReceived <- errs.ErrServerDown
+				case err == websocket.ErrReadLimit:
+					errReceived <- errs.ErrWsMsgTooLarge
+				default:
+					errReceived <- fmt.Errorf("failed to read ws message: %w", err)
 				}
-				errReceived <- fmt.Errorf("failed to read message: %w", err)
 				return
 			}
 
@@ -194,6 +204,7 @@ func Handshake(cfg HandshakeConfig) error {
 
 	select {
 	case err := <-errReceived:
+		wsConn.Close()
 		return err
 	case <-handshakeComplete:
 		logs.Info("Runner's task offer was accepted")

@@ -7,14 +7,18 @@ import (
 	"os"
 	"os/exec"
 	"sync"
-	"task-runner-launcher/internal/auth"
 	"task-runner-launcher/internal/config"
 	"task-runner-launcher/internal/env"
 	"task-runner-launcher/internal/errs"
 	"task-runner-launcher/internal/http"
 	"task-runner-launcher/internal/logs"
+	"task-runner-launcher/internal/ws"
 	"time"
 )
+
+type Command interface {
+	Execute() error
+}
 
 type LaunchCommand struct {
 	RunnerType string
@@ -85,7 +89,7 @@ func (l *LaunchCommand) Execute() error {
 
 		// 5. fetch grant token for launcher
 
-		launcherGrantToken, err := auth.FetchGrantToken(envCfg.TaskBrokerServerURI, envCfg.AuthToken)
+		launcherGrantToken, err := http.FetchGrantToken(envCfg.TaskBrokerServerURI, envCfg.AuthToken)
 		if err != nil {
 			return fmt.Errorf("failed to fetch grant token for launcher: %w", err)
 		}
@@ -94,13 +98,13 @@ func (l *LaunchCommand) Execute() error {
 
 		// 6. connect to main and wait for task offer to be accepted
 
-		handshakeCfg := auth.HandshakeConfig{
+		handshakeCfg := ws.HandshakeConfig{
 			TaskType:            l.RunnerType,
 			TaskBrokerServerURI: envCfg.TaskBrokerServerURI,
 			GrantToken:          launcherGrantToken,
 		}
 
-		err = auth.Handshake(handshakeCfg)
+		err = ws.Handshake(handshakeCfg)
 		switch {
 		case errors.Is(err, errs.ErrServerDown):
 			logs.Warn("n8n is down, launcher will try to reconnect...")
@@ -112,7 +116,7 @@ func (l *LaunchCommand) Execute() error {
 
 		// 7. fetch grant token for runner
 
-		runnerGrantToken, err := auth.FetchGrantToken(envCfg.TaskBrokerServerURI, envCfg.AuthToken)
+		runnerGrantToken, err := http.FetchGrantToken(envCfg.TaskBrokerServerURI, envCfg.AuthToken)
 		if err != nil {
 			return fmt.Errorf("failed to fetch grant token for runner: %w", err)
 		}

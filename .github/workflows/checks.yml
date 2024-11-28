@@ -16,7 +16,7 @@ jobs:
           version: latest
 
       - name: Format check
-        run: go fmt ./...
+        run: make fmt-check
 
       - name: Static analysis
         run: go vet ./...

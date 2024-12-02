@@ -86,7 +86,7 @@ func (w *failingWriter) WriteHeader(statusCode int) {
 }
 
 func TestNewHealthCheckServer(t *testing.T) {
-	server := NewHealthCheckServer("5680")
+	server := newHealthCheckServer("5680")
 
 	require.NotNil(t, server, "server should not be nil")
 

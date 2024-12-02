@@ -6,6 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCheckUntilBrokerReadyHappyPath(t *testing.T) {
@@ -45,20 +48,15 @@ func TestCheckUntilBrokerReadyHappyPath(t *testing.T) {
 
 			select {
 			case err := <-done:
-				if tt.expectedError == nil && err != nil {
-					t.Errorf("expected no error, got %v", err)
-				} else if tt.expectedError != nil && err == nil {
-					t.Errorf("expected error %v, got nil", tt.expectedError)
-				} else if tt.expectedError != nil && err.Error() != tt.expectedError.Error() {
-					t.Errorf("expected error %v, got %v", tt.expectedError, err)
+				if tt.expectedError == nil {
+					assert.NoError(t, err, "Expected no error")
+				} else {
+					assert.EqualError(t, err, tt.expectedError.Error(), "Unexpected error")
 				}
-
-				if requestCount > tt.maxReqs {
-					t.Errorf("expected at most %d requests, got %d", tt.maxReqs, requestCount)
-				}
+				assert.LessOrEqual(t, requestCount, tt.maxReqs, "Too many requests made")
 
 			case <-ctx.Done():
-				t.Errorf("test timed out after %v", tt.timeout)
+				t.Error("test timed out")
 			}
 		})
 	}
@@ -106,7 +104,7 @@ func TestCheckUntilBrokerReadyErrors(t *testing.T) {
 			case <-ctx.Done():
 				// expected timeout
 			case err := <-brokerUnexpectedlyReady:
-				t.Errorf("expected timeout, got: %v", err)
+				assert.Fail(t, "Expected timeout, got %v", err)
 			}
 		})
 	}
@@ -138,23 +136,21 @@ func TestSendReadinessRequest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.Method != http.MethodGet {
-					t.Errorf("expected GET request, got %s", r.Method)
-				}
-				if r.URL.Path != "/healthz" {
-					t.Errorf("expected /healthz path, got %s", r.URL.Path)
-				}
+				assert.Equal(t, http.MethodGet, r.Method, "Unexpected HTTP method")
+				assert.Equal(t, "/healthz", r.URL.Path, "Unexpected request path")
 				w.WriteHeader(tt.serverResponse)
 			}))
 			defer srv.Close()
 
 			resp, err := sendHealthRequest(srv.URL)
 
-			if err == nil {
+			if !tt.expectedError {
+				require.NoError(t, err, "Unexpected error making request")
+				require.NotNil(t, resp, "Response should not be nil")
 				defer resp.Body.Close()
-				if resp.StatusCode != tt.serverResponse {
-					t.Errorf("expected status code %d, got %d", tt.serverResponse, resp.StatusCode)
-				}
+				assert.Equal(t, tt.serverResponse, resp.StatusCode, "Unexpected status code")
+			} else {
+				assert.Error(t, err, "Expected an error")
 			}
 		})
 	}

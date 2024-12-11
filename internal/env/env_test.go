@@ -6,46 +6,56 @@ import (
 	"sort"
 	"task-runner-launcher/internal/config"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestAllowedOnly(t *testing.T) {
+func TestPartitionByAllowlist(t *testing.T) {
 	tests := []struct {
-		name     string
-		envVars  map[string]string
-		allowed  []string
-		expected []string
+		name            string
+		envVars         map[string]string
+		allowList       []string
+		expectedInclude []string
+		expectedExclude []string
 	}{
 		{
-			name: "returns only allowed env vars",
+			name: "partitions env vars correctly",
 			envVars: map[string]string{
 				"ALLOWED1":     "value1",
 				"ALLOWED2":     "value2",
 				"NOT_ALLOWED1": "value3",
 				"NOT_ALLOWED2": "value4",
 			},
-			allowed: []string{"ALLOWED1", "ALLOWED2"},
-			expected: []string{
+			allowList: []string{"ALLOWED1", "ALLOWED2"},
+			expectedInclude: []string{
 				"ALLOWED1=value1",
 				"ALLOWED2=value2",
 			},
+			expectedExclude: []string{
+				"NOT_ALLOWED1=value3",
+				"NOT_ALLOWED2=value4",
+			},
 		},
 		{
-			name:     "returns empty slice when no env vars match allowlist",
-			envVars:  map[string]string{"FOO": "bar"},
-			allowed:  []string{"BAZ"},
-			expected: nil,
+			name:            "returns empty slices when no env vars match allowlist",
+			envVars:         map[string]string{"FOO": "bar"},
+			allowList:       []string{"BAZ"},
+			expectedInclude: nil,
+			expectedExclude: []string{"FOO=bar"},
 		},
 		{
-			name:     "returns empty slice when allowlist is empty",
-			envVars:  map[string]string{"FOO": "bar"},
-			allowed:  []string{},
-			expected: nil,
+			name:            "returns empty included and all in excluded when allowlist is empty",
+			envVars:         map[string]string{"FOO": "bar"},
+			allowList:       []string{},
+			expectedInclude: nil,
+			expectedExclude: []string{"FOO=bar"},
 		},
 		{
-			name:     "returns empty slice when env vars is empty",
-			envVars:  map[string]string{},
-			allowed:  []string{"FOO"},
-			expected: nil,
+			name:            "returns empty slices when env vars is empty",
+			envVars:         map[string]string{},
+			allowList:       []string{"FOO"},
+			expectedInclude: nil,
+			expectedExclude: nil,
 		},
 	}
 
@@ -56,14 +66,18 @@ func TestAllowedOnly(t *testing.T) {
 				os.Setenv(k, v)
 			}
 
-			got := allowedOnly(tt.allowed)
+			included, excluded := partitionByAllowlist(tt.allowList)
 
-			if tt.expected == nil && len(got) == 0 {
-				return
+			if tt.expectedInclude == nil {
+				assert.Empty(t, included)
+			} else {
+				assert.Equal(t, tt.expectedInclude, included)
 			}
 
-			if !reflect.DeepEqual(got, tt.expected) {
-				t.Errorf("AllowedOnly() = %v, want %v", got, tt.expected)
+			if tt.expectedExclude == nil {
+				assert.Empty(t, excluded)
+			} else {
+				assert.Equal(t, tt.expectedExclude, excluded)
 			}
 		})
 	}
@@ -94,7 +108,7 @@ func TestKeys(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := Keys(tt.input)
+			got := keys(tt.input)
 			if !reflect.DeepEqual(got, tt.expected) {
 				t.Errorf("Keys() = %v, want %v", got, tt.expected)
 			}

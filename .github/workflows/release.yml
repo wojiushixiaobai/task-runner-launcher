@@ -16,13 +16,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4.2.2
     
-      - uses: wangyoucao577/go-release-action@v1.52
+      - name: Setup Go
+        uses: actions/setup-go@v6
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          goos: ${{ matrix.goos }}
-          goarch: ${{ matrix.goarch }}
-          goversion: 1.25.7
-          binary_name: task-runner-launcher
-          project_path: ./cmd/launcher
-          sha256sum: true
-          extra_files: README.md LICENSE.md LICENSE_EE.md
+          go-version: 'stable'
+
+      - name: Build Binary
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          args: release --config ../goreleaser.test --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
